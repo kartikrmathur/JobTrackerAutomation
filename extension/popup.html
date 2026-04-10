@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Job Tracker</title>
+  <style>
+    body { font-family: Segoe UI, Arial, sans-serif; width: 280px; padding: 12px; margin: 0; }
+    h3 { margin: 0 0 10px; font-size: 15px; }
+    button { width: 100%; padding: 8px; margin-bottom: 6px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+    #saveBtn { background: #0a66c2; color: #fff; border: none; }
+    #saveBtn:hover { background: #004182; }
+    #exportBtn { background: #f3f3f3; }
+    #exportBtn:hover { background: #e0e0e0; }
+    #clearBtn { background: #fff; color: #c00; border-color: #c00; font-size: 11px; padding: 5px; }
+    #clearBtn:hover { background: #fee; }
+    #status { font-size: 12px; color: #555; margin: 8px 0 0; white-space: pre-wrap; }
+    #jobCount { font-size: 12px; color: #888; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <h3>Job Tracker</h3>
+  <div id="jobCount">Loading...</div>
+  <button id="saveBtn">Save LinkedIn Job</button>
+  <button id="exportBtn">Export All as CSV</button>
+  <button id="clearBtn">Clear All Saved Jobs</button>
+  <div id="status"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
