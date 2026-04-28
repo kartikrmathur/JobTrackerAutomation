@@ -35,6 +35,14 @@ Built for speed during high-volume applications, without requiring a backend or 
 | Greenhouse | `*.greenhouse.io/.../jobs/...` | `greenhouse.io` |
 | Naukri.com | `naukri.com/job-listings-...` or `naukri.com/myapply/...` | `naukri.com` |
 
+### Support stability matrix
+
+| Portal | Current status | Notes |
+|--------|----------------|-------|
+| LinkedIn | Stable | Works best when logged in; selectors may need periodic updates. |
+| Greenhouse | Stable | Uses URL + DOM + fallback parsing. |
+| Naukri.com | Partial on apply confirmation pages | Listing pages provide better detail coverage than `/myapply/...` pages. |
+
 ## 🚀 Installation
 
 1. Open Chrome and go to `chrome://extensions/`.
@@ -148,9 +156,34 @@ The script runs continuously and checks for new CSV files every 5 seconds.
 
 ## ⚠️ Known Limitations
 
-- **LinkedIn DOM changes:** LinkedIn occasionally updates page structure, which can break CSS selector-based extraction. If fields stop being captured, open an issue and it can be patched quickly.
-- **Login required:** The extension works best when logged into LinkedIn. Some data may not appear on public listings.
-- **Salary data:** LinkedIn often does not display salary. If salary is missing on the page, the CSV field will be blank.
-- **Portal coverage:** LinkedIn is the primary focus. Greenhouse and Naukri support exists but may need periodic selector updates as those sites evolve.
-- **Autofill is heuristic-based:** Dynamic or highly custom widgets may not map perfectly and can require manual edits.
-- **Permission scope:** The extension currently uses broad host permission (`<all_urls>`) so autofill can run across job portals and application pages.
+Each limitation includes impact, current mitigation, and next improvement.
+
+- **DOM changes on job portals**
+  - **Impact:** Extracted fields can become incomplete after portal UI updates.
+  - **Current mitigation:** Multi-layer extraction (JSON-LD, API, DOM selectors, regex fallbacks).
+  - **Next improvement:** Move selectors to a versioned per-portal config for faster patching.
+
+- **LinkedIn logged-out pages have reduced data**
+  - **Impact:** Some fields may be missing on public/guest views.
+  - **Current mitigation:** README guidance + fallback extraction paths.
+  - **Next improvement:** Explicit in-popup completeness indicator when critical fields are missing.
+
+- **Salary is frequently unavailable at source**
+  - **Impact:** Salary may be blank or `Not Mentioned` even when other fields are captured.
+  - **Current mitigation:** Preserve missing salary without breaking export format.
+  - **Next improvement:** Add optional manual edit/override before save.
+
+- **Naukri apply confirmation pages are partial**
+  - **Impact:** `/myapply/...` pages may return only title-level detail.
+  - **Current mitigation:** Dedicated apply-page handling + user note to save from listing page for full data.
+  - **Next improvement:** Improve apply-page fallback heuristics for company/location recovery where possible.
+
+- **Autofill uses heuristics, not hard field mappings**
+  - **Impact:** Dynamic/custom widgets can be skipped or require manual edits.
+  - **Current mitigation:** Field detection patterns + helper panel for quick copy/paste.
+  - **Next improvement:** Add per-domain field mapping overrides.
+
+- **Broad permission scope (`<all_urls>`)**
+  - **Impact:** May look overly permissive during review.
+  - **Current mitigation:** Data is stored locally; no backend account is required.
+  - **Next improvement:** Add domain allowlist controls and optional host-permission flow.
