@@ -1,7 +1,7 @@
 # 🗂️ Job Tracker Automation — Track applications faster, fill forms with less repetition
 
 ![Status](https://img.shields.io/badge/status-active-brightgreen)
-![Phase](https://img.shields.io/badge/phase-1%20%E2%80%94%20LinkedIn-blue)
+![Phase](https://img.shields.io/badge/phase-multi--portal%20(LI%20%2B%20Greenhouse%20%2B%20Naukri)-blue)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 > A Chrome extension for job seekers: save job details in one click, export one clean CSV, and reuse profile data to autofill application forms.
