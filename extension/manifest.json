@@ -1,16 +1,35 @@
 {
   "manifest_version": 3,
   "name": "Job Tracker",
-  "version": "1.2",
-  "description": "LinkedIn-only job tracker — auto-appends to a single persistent tracker",
+  "version": "1.4",
+  "description": "Save jobs from LinkedIn, Greenhouse boards, and Naukri.com; export one CSV from local storage",
   "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["<all_urls>"],
   "action": {
-    "default_popup": "popup.html",
-    "default_icon": {
-      "128": "icon128.png"
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "commands": {
+    "trigger-autofill": {
+      "suggested_key": {
+        "default": "Alt+F",
+        "mac": "Alt+F"
+      },
+      "description": "Autofill job application form using active profile"
     }
   },
-  "icons": {
-    "128": "icon128.png"
-  }
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/autofill.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ]
 }

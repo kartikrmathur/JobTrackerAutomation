@@ -7,8 +7,8 @@ import glob
 # 🔧 CHANGE THIS (your system username)
 DOWNLOADS_PATH = "C:/Users/Lenovo/Downloads/"
 
-# 📄 Buffer files (handles jobs_buffer.csv, jobs_buffer (1).csv, etc.)
-CSV_PATTERN = os.path.join(DOWNLOADS_PATH, "jobs_buffer*.csv")
+# 📄 Exported CSV files from the extension (handles job_tracker_2025-01-01.csv, etc.)
+CSV_PATTERN = os.path.join(DOWNLOADS_PATH, "job_tracker*.csv")
 
 # 📊 Your main Excel file
 EXCEL_FILE = r"D:\01. SelfBuilding [Personal]\01. Life\01. Job Hunting\04. Tracker And Analysis\JobTracker.xlsx"
@@ -23,6 +23,7 @@ COLUMNS = [
     "Year of experience",
     "Submission Status",
     "Portal",
+    "URL",
     "Referred by",
     "Result"
 ]
@@ -40,10 +41,7 @@ def process_files():
             if os.path.getsize(file) == 0:
                 continue
 
-            df = pd.read_csv(file, header=None)
-
-            # Ensure correct columns
-            df.columns = COLUMNS
+            df = pd.read_csv(file)
 
             all_new_data.append(df)
 

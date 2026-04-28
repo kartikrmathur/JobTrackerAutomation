@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JobFill Profiles</title>
+  <style>
+    :root {
+      --bg: #0d0f12;
+      --bg-soft: #151a20;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #4ade80;
+      --danger: #f87171;
+      --border: #253041;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "DM Sans", "Segoe UI", system-ui, sans-serif;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--border);
+      padding: 16px;
+      background: #10141a;
+    }
+
+    .content {
+      padding: 20px;
+    }
+
+    h1, h2 {
+      margin: 0 0 12px;
+      font-weight: 600;
+    }
+
+    h1 { font-size: 20px; }
+    h2 { font-size: 16px; color: var(--muted); }
+
+    .hint {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .profile-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 14px;
+      max-height: calc(100vh - 190px);
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .profile-item {
+      border: 1px solid var(--border);
+      background: var(--bg-soft);
+      color: var(--text);
+      padding: 10px;
+      border-radius: 8px;
+      text-align: left;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .profile-item.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent) inset;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 10px;
+      cursor: pointer;
+      font-size: 13px;
+      background: var(--bg-soft);
+      color: var(--text);
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #03240f;
+      font-weight: 600;
+    }
+
+    .btn.danger {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .status {
+      margin-top: 12px;
+      min-height: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+
+    form {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-family: "DM Mono", Consolas, monospace;
+    }
+
+    input, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-soft);
+      color: var(--text);
+      padding: 9px 10px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+
+    textarea { min-height: 84px; resize: vertical; }
+
+    .exp-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+
+    .exp-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .exp-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      background: #111820;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
+      gap: 10px;
+    }
+
+    .exp-title {
+      grid-column: 1 / -1;
+      color: var(--muted);
+      font-size: 12px;
+      font-family: "DM Mono", Consolas, monospace;
+      margin-bottom: 2px;
+    }
+
+    .exp-remove {
+      grid-column: 1 / -1;
+      justify-self: start;
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1>JobFill Profiles</h1>
+      <p class="hint">Create and manage profiles used for autofill.</p>
+      <div id="profilesList" class="profile-list"></div>
+      <div class="btn-row">
+        <button class="btn primary" id="newProfileBtn" type="button">New Profile</button>
+      </div>
+      <div id="optionsStatus" class="status"></div>
+    </aside>
+
+    <main class="content">
+      <h2>Profile Data</h2>
+      <form id="profileForm">
+        <div class="full">
+          <label for="profileName">Profile Name</label>
+          <input id="profileName" name="name" autocomplete="off" required>
+        </div>
+
+        <div><label for="firstName">First Name</label><input id="firstName" name="firstName"></div>
+        <div><label for="lastName">Last Name</label><input id="lastName" name="lastName"></div>
+        <div><label for="email">Email</label><input id="email" name="email" type="email"></div>
+        <div><label for="phone">Phone</label><input id="phone" name="phone"></div>
+        <div><label for="address">Address</label><input id="address" name="address"></div>
+        <div><label for="city">City</label><input id="city" name="city"></div>
+        <div><label for="state">State</label><input id="state" name="state"></div>
+        <div><label for="zip">ZIP</label><input id="zip" name="zip"></div>
+        <div><label for="country">Country</label><input id="country" name="country"></div>
+        <div><label for="currentTitle">Current Title</label><input id="currentTitle" name="currentTitle"></div>
+        <div><label for="currentCompany">Current Company</label><input id="currentCompany" name="currentCompany"></div>
+        <div><label for="yearsExperience">Years Experience</label><input id="yearsExperience" name="yearsExperience"></div>
+        <div><label for="nationalIdentifier">National Identifier</label><input id="nationalIdentifier" name="nationalIdentifier"></div>
+        <div><label for="expectedSalary">Expected Salary</label><input id="expectedSalary" name="expectedSalary"></div>
+        <div><label for="noticePeriod">Notice Period</label><input id="noticePeriod" name="noticePeriod"></div>
+        <div><label for="degree">Degree</label><input id="degree" name="degree"></div>
+        <div><label for="major">Major</label><input id="major" name="major"></div>
+        <div><label for="university">University</label><input id="university" name="university"></div>
+        <div><label for="graduationYear">Graduation Year</label><input id="graduationYear" name="graduationYear"></div>
+        <div><label for="gpa">GPA</label><input id="gpa" name="gpa"></div>
+        <div><label for="linkedin">LinkedIn</label><input id="linkedin" name="linkedin" type="url"></div>
+        <div><label for="github">GitHub</label><input id="github" name="github" type="url"></div>
+        <div><label for="portfolio">Portfolio</label><input id="portfolio" name="portfolio" type="url"></div>
+        <div class="full"><label for="skills">Skills</label><textarea id="skills" name="skills"></textarea></div>
+        <div class="full"><label for="summary">Summary</label><textarea id="summary" name="summary"></textarea></div>
+        <div class="full">
+          <div class="exp-header">
+            <label style="margin:0;">Work Experience</label>
+            <button class="btn" id="addExperienceBtn" type="button">+ Add Experience</button>
+          </div>
+          <div id="experiencesList" class="exp-list"></div>
+        </div>
+
+        <div class="full btn-row">
+          <button class="btn primary" id="saveProfileBtn" type="submit">Save Profile</button>
+          <button class="btn danger" id="deleteProfileBtn" type="button">Delete Profile</button>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

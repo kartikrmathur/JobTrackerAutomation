@@ -3,26 +3,67 @@
 <head>
   <title>Job Tracker</title>
   <style>
-    body { font-family: Segoe UI, Arial, sans-serif; width: 280px; padding: 12px; margin: 0; }
+    :root {
+      --bg: #0d0f12;
+      --panel: #151a20;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #4ade80;
+      --border: #253041;
+    }
+    body {
+      font-family: "DM Sans", "Segoe UI", Arial, sans-serif;
+      width: 320px;
+      padding: 12px;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
     h3 { margin: 0 0 10px; font-size: 15px; }
-    button { width: 100%; padding: 8px; margin-bottom: 6px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+    button, select {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      background: var(--panel);
+      color: var(--text);
+    }
     #saveBtn { background: #0a66c2; color: #fff; border: none; }
     #saveBtn:hover { background: #004182; }
-    #exportBtn { background: #f3f3f3; }
-    #exportBtn:hover { background: #e0e0e0; }
-    #clearBtn { background: #fff; color: #c00; border-color: #c00; font-size: 11px; padding: 5px; }
-    #clearBtn:hover { background: #fee; }
-    #status { font-size: 12px; color: #555; margin: 8px 0 0; white-space: pre-wrap; }
-    #jobCount { font-size: 12px; color: #888; margin-bottom: 8px; }
+    #exportBtn { background: #1d2430; }
+    #exportBtn:hover { background: #242f40; }
+    #clearBtn { background: #2f1414; color: #fca5a5; border-color: #7f1d1d; font-size: 11px; padding: 5px; }
+    #clearBtn:hover { background: #3b1616; }
+    #status, #autofillStatus { font-size: 12px; color: var(--muted); margin: 8px 0 0; white-space: pre-wrap; min-height: 16px; }
+    #jobCount { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+    .section { border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+    .section h4 { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+    #fillBtn { background: var(--accent); border: none; color: #03240f; font-weight: 600; }
+    #openProfilesBtn { background: #1d2430; }
   </style>
 </head>
 <body>
   <h3>Job Tracker</h3>
-  <div id="jobCount">Loading...</div>
-  <button id="saveBtn">Save LinkedIn Job</button>
-  <button id="exportBtn">Export All as CSV</button>
-  <button id="clearBtn">Clear All Saved Jobs</button>
-  <div id="status"></div>
+  <div class="section">
+    <h4>Tracker</h4>
+    <div id="jobCount">Loading...</div>
+    <button id="saveBtn">Save Applied Job</button>
+    <button id="exportBtn">Export All as CSV</button>
+    <button id="clearBtn">Clear All Saved Jobs</button>
+    <div id="status"></div>
+  </div>
+
+  <div class="section">
+    <h4>Autofill</h4>
+    <select id="profileSelect"></select>
+    <button id="fillBtn">Fill This Page</button>
+    <button id="openProfilesBtn">Edit Profiles</button>
+    <div id="autofillStatus"></div>
+    <div id="shortcutHint" style="font-size:11px;color:var(--muted);margin-top:6px;">Shortcut: <span style="font-family:'DM Mono',Consolas,monospace;">Alt+F</span></div>
+  </div>
 
   <script src="popup.js"></script>
 </body>
