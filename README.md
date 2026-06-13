@@ -1,192 +1,178 @@
-# 🗂️ Job Tracker Automation — Track applications faster, fill forms with less repetition
+# Job Tracker Automation
 
 ![Status](https://img.shields.io/badge/status-active-brightgreen)
-![Phase](https://img.shields.io/badge/phase-multi--portal%20(LI%20%2B%20GH%20%2B%20Naukri%20%2B%20Shine)-blue)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
-> A Chrome extension for job seekers: save job details in one click, export one clean CSV, and reuse profile data to autofill application forms.
-
-![Demo](assets/demo.gif)
+> One click to save a job. Everything after that — logging, Gmail scanning, status updates, Excel sync — runs automatically.
 
 ---
 
-A practical workflow tool for active job search:
+## What this is
 
-- Capture job details from LinkedIn, Greenhouse, Naukri, and Shine.
-- Keep your application log in one exportable CSV.
-- Reuse saved profile data to autofill common form fields.
+A four-layer automation system for job search tracking. Save a job once. The system handles the rest.
 
-Built for speed during high-volume applications, without requiring a backend or account signup.
+- **Chrome Extension** — captures job details from LinkedIn, Naukri, Greenhouse, Shine in one click. Autofills application forms. Fires data to the cloud instantly.
+- **Google Apps Script** — receives jobs via HTTP POST, writes to Google Sheet, scans Gmail every hour, classifies responses, updates statuses automatically.
+- **Google Drive (sync bus)** — Apps Script writes a CSV export to your Drive folder. Google Drive Desktop syncs it to your local machine. No extra services needed.
+- **Python Daemon** — starts on Windows login, watches for the Drive CSV, merges changes into your local Excel tracker, then cleans up.
 
-## ✨ Features
+---
 
-- **Capture in one click** — save title, company, location, salary, experience, URL, and portal.
-- **Local storage + dedupe** — jobs are stored in extension storage and duplicate saves are blocked.
-- **Single CSV export** — export all saved jobs into `job_tracker_YYYY-MM-DD.csv`.
-- **Layered extraction** — uses JSON-LD, site APIs, DOM selectors, and regex fallbacks.
-- **Autofill profiles** — create and manage multiple profiles from the options page.
-- **Shortcut + helper panel** — run autofill via popup or `Alt+F`, with an on-page copy helper for tricky fields.
+## Architecture
 
-## Supported sites
+```
+Chrome Extension
+      │
+      │  HTTP POST (job data)
+      ▼
+Google Apps Script (Web App)
+      │
+      ├── Writes job to Google Sheet immediately
+      │
+      └── Hourly trigger: scans Gmail
+                │
+                ├── Classifies: Applied / Rejected / Interviewing
+                ├── Updates Google Sheet
+                └── Writes job_tracker_gs_export.csv → Google Drive folder
+                                                              │
+                                          Google Drive Desktop syncs
+                                                              │
+                                                     D: drive (local)
+                                                              │
+                                                     Python Daemon picks up
+                                                              │
+                                              Merges into Excel tracker
+                                              Deletes CSV after save
+```
 
-| Site | Example URL pattern | `Portal` column in CSV |
-|------|---------------------|-------------------------|
-| LinkedIn | `linkedin.com/jobs/...` | `linkedin.com` |
-| Greenhouse | `*.greenhouse.io/.../jobs/...` | `greenhouse.io` |
-| Naukri.com | `naukri.com/job-listings-...` or `naukri.com/myapply/...` | `naukri.com` |
-| Shine.com | `shine.com/jobs/{title}/{company}/{id}` | `shine.com` |
+---
 
-### Support stability matrix
+## Supported portals
 
-| Portal | Current status | Notes |
-|--------|----------------|-------|
-| LinkedIn | Stable | Works best when logged in; selectors may need periodic updates. |
-| Greenhouse | Stable | Uses URL + DOM + fallback parsing. |
-| Naukri.com | Partial on apply confirmation pages | Listing pages provide better detail coverage than `/myapply/...` pages. |
-| Shine.com | Stable on job detail pages | Parses meta title, labeled fields (Location, Experience, Salary), and URL slug. |
+| Portal | URL pattern | Status |
+|--------|-------------|--------|
+| LinkedIn | `linkedin.com/jobs/...` | Stable |
+| Greenhouse | `*.greenhouse.io/.../jobs/...` | Stable |
+| Naukri.com | `naukri.com/job-listings-...` | Partial on apply pages |
+| Shine.com | `shine.com/jobs/{title}/{company}/{id}` | Stable |
 
-## 🚀 Installation
+---
 
-1. Open Chrome and go to `chrome://extensions/`.
-2. Enable **Developer mode** (toggle in the top-right corner).
-3. Click **Load unpacked** and select the `extension/` folder from this project.
-4. The Job Tracker icon will appear in your Chrome toolbar. Pin it for quick access.
+## Setup
 
-## 🖥️ How to Use
+### 1. Chrome Extension
 
-### Save a job
+1. Open `chrome://extensions/` in Chrome.
+2. Enable **Developer mode**.
+3. Click **Load unpacked** → select the `extension/` folder.
+4. Pin the extension to your toolbar.
 
-1. Open a supported job page (LinkedIn, Greenhouse, Naukri.com, or Shine.com job listing).
-2. Click the Job Tracker extension icon in the toolbar.
-3. Click **Save Applied Job**.
-4. The popup will confirm: `Saved: Job Title @ Company`.
+### 2. Google Apps Script
 
-Repeat for as many jobs as you want. Each job is appended to the internal list.
+1. Go to [script.google.com](https://script.google.com) → **New project**.
+2. Paste the contents of `JobApplicationTracker_v2.gs`.
+3. Update the `CONFIG` block at the top:
+   - `SHEET_NAME` — your Google Sheet name
+   - `TAB_TRACKER` — the tab name inside the sheet (default: `JobHunt 2026`)
+   - `DRIVE_EXPORT_FOLDER` — the Google Drive folder name where the CSV export should land (must match your Drive folder exactly)
+4. **Deploy as Web App:**
+   - Click **Deploy → New deployment**
+   - Type: **Web app**
+   - Execute as: **Me**
+   - Who has access: **Anyone**
+   - Click **Deploy** → copy the Web App URL
+5. Set up the hourly trigger:
+   - Click **Triggers (clock icon)** → **Add trigger**
+   - Function: `processJobEmails`
+   - Event source: **Time-driven** → **Hour timer** → **Every hour**
+6. Paste the Web App URL into the extension's Options page.
 
-**Note:** On Naukri apply confirmation pages (`/myapply/...`), only the job title can be extracted (Naukri blocks API access with CAPTCHA on these pages). For full details, save from the job listing page before applying.
+### 3. Google Drive sync
 
-### Export to CSV
+Ensure **Google Drive Desktop** is installed and your D: drive folder is synced. The `DRIVE_EXPORT_FOLDER` in the Apps Script config must match the exact folder name in your Google Drive where your Excel tracker lives.
 
-1. Click the extension icon.
-2. Click **Export All as CSV**.
-3. A single file named `job_tracker_YYYY-MM-DD.csv` will download containing all your saved jobs.
+The Apps Script will write `job_tracker_gs_export.csv` into that folder. Google Drive Desktop syncs it locally. The Python daemon picks it up from there.
 
-### Clear saved jobs
+### 4. Python daemon (auto-start on login)
 
-1. Click the extension icon.
-2. Click **Clear All Saved Jobs**.
-3. Confirm the prompt. All stored data will be deleted.
+1. Open `sync_script.py` and verify the paths at the top:
+   - `EXCEL_FILE` — path to your local Excel tracker
+   - `DRIVE_EXPORT_CSV` — path to the synced CSV (same folder as Excel)
+2. Install dependencies:
+   ```bash
+   pip install pandas openpyxl
+   ```
+3. Right-click `install_startup.bat` → **Run as administrator**. This registers the sync script as a Windows Scheduled Task that runs silently on every login.
+4. Check `sync_log.txt` in the project folder to verify it's running.
 
-## 📁 What Gets Captured / Output Format
+---
 
-| Column | Description |
-|--------|-------------|
-| Date of Apply | Date the job was saved |
-| Organization | Company name |
-| Salary | Salary if mentioned on the page |
-| Location | City / region / country or work arrangement when detected |
-| Role | Job title |
-| Year of experience | Experience requirement extracted from the listing |
-| Submission Status | Set to "Applied" by default |
-| Portal | `linkedin.com`, `greenhouse.io`, `naukri.com`, or `shine.com` |
-| URL | Direct link to the job listing |
-| Referred by | Empty — fill in manually |
-| Result | Empty — fill in manually |
+## How it works end to end
 
-## How extraction works
+1. You open a job listing and click Save on the extension.
+2. Job data is sent to the Apps Script Web App and written to Google Sheet instantly.
+3. Every hour, the Gmail scanner runs — reads responses, classifies them by keyword patterns, updates the Google Sheet.
+4. The Apps Script writes a CSV export to the Google Drive folder.
+5. Google Drive Desktop syncs the CSV to your local D: drive within seconds.
+6. The Python daemon detects the file, merges updates into your Excel tracker, deletes the CSV.
 
-1. **JSON-LD** — if the page embeds `schema.org/JobPosting`, title, organization, location, salary, and experience are read from there first.
-2. **Naukri.com** — internal API (`/jobapi/v4/job/{id}`), DOM selectors (`span.exp-wrap`, `span.sal-wrap`, etc.), and body text regex. Apply confirmation pages extract job ID and title from URL parameters.
-3. **Shine.com** — job ID from URL path, `og:title` pattern (`{Role} Job in {Company} at {Location}`), labeled body fields (`Location`, `Experience`, `Salary`), and regex fallbacks.
-4. **LinkedIn** — DOM selectors, `document.title` pipe format, "About the job" text, and body regex for location and experience.
-5. **Greenhouse** — URL slug for organization name, `h1` for title, location from lines after the title or body regex.
+Your Excel file reflects reality without you touching it.
 
-## Sync script
+---
 
-`sync_script.py` watches your Downloads folder for exported CSV files and appends them into your main Excel tracker. Update the paths at the top of the file to match your system.
+## What gets captured
+
+| Column | Source |
+|--------|--------|
+| Date of Apply | Auto — date saved |
+| Organization | Extracted from page |
+| Location | Extracted from page |
+| Role | Extracted from page |
+| Exp. Required | Extracted from page |
+| Salary | Extracted from page (if available) |
+| Submission Status | Default: Applied |
+| Portal | Detected automatically |
+| URL | Job listing URL |
+| Referred by | Manual |
+| Result | Auto-updated by Gmail scanner |
+| Gmail Synced On | Auto-updated by Gmail scanner |
+
+---
 
 ## Project structure
 
 ```
 extension/
-  manifest.json               — Chrome extension manifest (v3)
-  popup.html                  — Popup UI (tracking + autofill actions)
-  popup.js                    — Job extraction, storage, export, popup autofill actions
-  background.js               — Keyboard shortcut handler (`Alt+F`) for autofill
-  content/autofill.js         — Form field detection, autofill engine, floating helper
-  options/options.html        — Profile manager UI
-  options/options.js          — Profile CRUD and local storage persistence
-sync_script.py                — Optional: auto-sync exported CSVs to Excel
+  manifest.json          Chrome extension manifest (MV3)
+  popup.html             Popup UI
+  popup.js               Job extraction, storage, cloud sync, autofill
+  background.js          Alt+F shortcut handler
+  content/autofill.js    Form field detection and autofill engine
+  options/options.html   Profile manager + Web App URL config
+  options/options.js     Profile CRUD and settings persistence
+
+JobApplicationTracker_v2.gs   Google Apps Script (deploy this to script.google.com)
+sync_script.py                Python daemon — Drive CSV watcher and Excel sync
+install_startup.bat           Registers sync_script.py as a Windows login task
+sync_log.txt                  Auto-generated log (created on first run)
 ```
+
+---
 
 ## Requirements
 
-- Google Chrome (or any Chromium-based browser)
-- For LinkedIn: being logged in usually gives the richest DOM.
-- For sync script: Python 3 with `pandas` and `openpyxl`.
+- **Chrome** (or any Chromium browser)
+- **Google account** — for Apps Script, Google Sheet, Gmail, Google Drive
+- **Google Drive Desktop** — installed and syncing your tracker folder to a local drive
+- **Python 3** with `pandas` and `openpyxl`
+- **Windows** — for Task Scheduler / install_startup.bat (sync script can be run manually on other platforms)
 
-## Optional: Excel sync script (`sync_script.py`)
+---
 
-A utility script for syncing exported CSV data into your main Excel tracker file.
+## Known limitations
 
-> **Note:** This is optional. The Chrome extension works standalone - this script is for power users who want automated syncing.
-
-### What it does
-
-- Watches your Downloads folder for `job_tracker*.csv` exports.
-- Merges new rows into your Excel tracker.
-- Removes duplicates by `URL` when possible.
-- Deletes processed CSV files after successful sync.
-
-### Setup
-
-1. Open `sync_script.py`.
-2. Update `DOWNLOADS_PATH` to your local Downloads path.
-3. Update `EXCEL_FILE` to your target Excel tracker path.
-4. Install dependencies:
-
-```bash
-pip install pandas openpyxl
-```
-
-### Usage
-
-```bash
-python sync_script.py
-```
-
-The script runs continuously and checks for new CSV files every 5 seconds.
-
-## ⚠️ Known Limitations
-
-Each limitation includes impact, current mitigation, and next improvement.
-
-- **DOM changes on job portals**
-  - **Impact:** Extracted fields can become incomplete after portal UI updates.
-  - **Current mitigation:** Multi-layer extraction (JSON-LD, API, DOM selectors, regex fallbacks).
-  - **Next improvement:** Move selectors to a versioned per-portal config for faster patching.
-
-- **LinkedIn logged-out pages have reduced data**
-  - **Impact:** Some fields may be missing on public/guest views.
-  - **Current mitigation:** README guidance + fallback extraction paths.
-  - **Next improvement:** Explicit in-popup completeness indicator when critical fields are missing.
-
-- **Salary is frequently unavailable at source**
-  - **Impact:** Salary may be blank or `Not Mentioned` even when other fields are captured.
-  - **Current mitigation:** Preserve missing salary without breaking export format.
-  - **Next improvement:** Add optional manual edit/override before save.
-
-- **Naukri apply confirmation pages are partial**
-  - **Impact:** `/myapply/...` pages may return only title-level detail.
-  - **Current mitigation:** Dedicated apply-page handling + user note to save from listing page for full data.
-  - **Next improvement:** Improve apply-page fallback heuristics for company/location recovery where possible.
-
-- **Autofill uses heuristics, not hard field mappings**
-  - **Impact:** Dynamic/custom widgets can be skipped or require manual edits.
-  - **Current mitigation:** Field detection patterns + helper panel for quick copy/paste.
-  - **Next improvement:** Add per-domain field mapping overrides.
-
-- **Broad permission scope (`<all_urls>`)**
-  - **Impact:** May look overly permissive during review.
-  - **Current mitigation:** Data is stored locally; no backend account is required.
-  - **Next improvement:** Add domain allowlist controls and optional host-permission flow.
+- **Portal DOM changes** — extraction selectors may need updates after portal UI changes. Multi-layer fallbacks (JSON-LD, API, DOM, regex) reduce breakage frequency.
+- **Naukri apply pages** — `/myapply/...` pages only return job title. Save from the listing page before applying for full detail.
+- **Gmail classification is rule-based** — keyword patterns cover most cases but edge cases (unusual rejection phrasing) may need manual pattern additions in the Apps Script config.
+- **Excel must be closed during sync** — openpyxl cannot write to a file that Excel has open. If locked, the sync retries next cycle automatically.
+- **Apps Script quota** — the free tier allows ~6 minutes of execution per run. A time-guard at 4.5 minutes prevents quota errors on large inboxes.
