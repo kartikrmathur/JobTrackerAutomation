@@ -1,7 +1,7 @@
 # 🗂️ Job Tracker Automation — Track applications faster, fill forms with less repetition
 
 ![Status](https://img.shields.io/badge/status-active-brightgreen)
-![Phase](https://img.shields.io/badge/phase-multi--portal%20(LI%20%2B%20Greenhouse%20%2B%20Naukri)-blue)
+![Phase](https://img.shields.io/badge/phase-multi--portal%20(LI%20%2B%20GH%20%2B%20Naukri%20%2B%20Shine)-blue)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 > A Chrome extension for job seekers: save job details in one click, export one clean CSV, and reuse profile data to autofill application forms.
@@ -12,7 +12,7 @@
 
 A practical workflow tool for active job search:
 
-- Capture job details from LinkedIn, Greenhouse, and Naukri.
+- Capture job details from LinkedIn, Greenhouse, Naukri, and Shine.
 - Keep your application log in one exportable CSV.
 - Reuse saved profile data to autofill common form fields.
 
@@ -34,6 +34,7 @@ Built for speed during high-volume applications, without requiring a backend or 
 | LinkedIn | `linkedin.com/jobs/...` | `linkedin.com` |
 | Greenhouse | `*.greenhouse.io/.../jobs/...` | `greenhouse.io` |
 | Naukri.com | `naukri.com/job-listings-...` or `naukri.com/myapply/...` | `naukri.com` |
+| Shine.com | `shine.com/jobs/{title}/{company}/{id}` | `shine.com` |
 
 ### Support stability matrix
 
@@ -42,6 +43,7 @@ Built for speed during high-volume applications, without requiring a backend or 
 | LinkedIn | Stable | Works best when logged in; selectors may need periodic updates. |
 | Greenhouse | Stable | Uses URL + DOM + fallback parsing. |
 | Naukri.com | Partial on apply confirmation pages | Listing pages provide better detail coverage than `/myapply/...` pages. |
+| Shine.com | Stable on job detail pages | Parses meta title, labeled fields (Location, Experience, Salary), and URL slug. |
 
 ## 🚀 Installation
 
@@ -54,7 +56,7 @@ Built for speed during high-volume applications, without requiring a backend or 
 
 ### Save a job
 
-1. Open a supported job page (LinkedIn, Greenhouse, or Naukri.com job listing).
+1. Open a supported job page (LinkedIn, Greenhouse, Naukri.com, or Shine.com job listing).
 2. Click the Job Tracker extension icon in the toolbar.
 3. Click **Save Applied Job**.
 4. The popup will confirm: `Saved: Job Title @ Company`.
@@ -86,7 +88,7 @@ Repeat for as many jobs as you want. Each job is appended to the internal list.
 | Role | Job title |
 | Year of experience | Experience requirement extracted from the listing |
 | Submission Status | Set to "Applied" by default |
-| Portal | `linkedin.com`, `greenhouse.io`, or `naukri.com` |
+| Portal | `linkedin.com`, `greenhouse.io`, `naukri.com`, or `shine.com` |
 | URL | Direct link to the job listing |
 | Referred by | Empty — fill in manually |
 | Result | Empty — fill in manually |
@@ -95,8 +97,9 @@ Repeat for as many jobs as you want. Each job is appended to the internal list.
 
 1. **JSON-LD** — if the page embeds `schema.org/JobPosting`, title, organization, location, salary, and experience are read from there first.
 2. **Naukri.com** — internal API (`/jobapi/v4/job/{id}`), DOM selectors (`span.exp-wrap`, `span.sal-wrap`, etc.), and body text regex. Apply confirmation pages extract job ID and title from URL parameters.
-3. **LinkedIn** — DOM selectors, `document.title` pipe format, "About the job" text, and body regex for location and experience.
-4. **Greenhouse** — URL slug for organization name, `h1` for title, location from lines after the title or body regex.
+3. **Shine.com** — job ID from URL path, `og:title` pattern (`{Role} Job in {Company} at {Location}`), labeled body fields (`Location`, `Experience`, `Salary`), and regex fallbacks.
+4. **LinkedIn** — DOM selectors, `document.title` pipe format, "About the job" text, and body regex for location and experience.
+5. **Greenhouse** — URL slug for organization name, `h1` for title, location from lines after the title or body regex.
 
 ## Sync script
 

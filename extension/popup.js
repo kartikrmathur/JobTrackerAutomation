@@ -1,4 +1,4 @@
-// Job Tracker Automation — Popup (LinkedIn + Greenhouse + Naukri.com)
+// Job Tracker Automation — Popup (LinkedIn + Greenhouse + Naukri.com + Shine.com)
 
 const CSV_HEADER = '"Date of Apply","Organization","Salary","Location","Role","Year of experience","Submission Status","Portal","URL","Referred by","Result"\n';
 const PROFILE_FIELDS = [
@@ -188,6 +188,29 @@ document.getElementById("saveBtn").addEventListener("click", async () => {
             }
             setStatus(msg);
         });
+
+        // ── Sync to Google Sheets (fire-and-forget) ──────────────────────
+        chrome.storage.local.get({ webAppUrl: '' }, async ({ webAppUrl }) => {
+            if (!webAppUrl) return; // not configured yet
+            try {
+                const res = await fetch(webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' }, // avoids CORS preflight
+                    body: JSON.stringify(saveData),
+                });
+                const json = await res.json().catch(() => ({}));
+                if (json.ok) {
+                    setStatus(`Saved & synced to Google Sheets: ${data.title} @ ${data.company}`);
+                } else if (json.skipped) {
+                    // already exists in sheet — that's fine
+                } else {
+                    console.warn('Sheets sync error:', json.error);
+                }
+            } catch (err) {
+                console.warn('Sheets sync failed (offline?):', err.message);
+                // Don't show error to user — local save already succeeded
+            }
+        });
     });
 });
 
@@ -227,17 +250,18 @@ document.getElementById("clearBtn").addEventListener("click", () => {
     });
 });
 
-// ── Injected into page: LinkedIn, Greenhouse, or Naukri.com ──
+// ── Injected into page: LinkedIn, Greenhouse, Naukri.com, or Shine.com ──
 async function extractJobDetails() {
 
     const hostname = window.location.hostname;
     const isLinkedIn = hostname.includes("linkedin.com");
     const isGreenhouse = hostname.includes("greenhouse.io");
     const isNaukri = hostname.includes("naukri.com");
+    const isShine = hostname.includes("shine.com");
 
-    if (!isLinkedIn && !isGreenhouse && !isNaukri) {
+    if (!isLinkedIn && !isGreenhouse && !isNaukri && !isShine) {
         return {
-            error: "Supported sites: LinkedIn, Greenhouse (job-boards.greenhouse.io), and Naukri.com. Open a job posting and try again."
+            error: "Supported sites: LinkedIn, Greenhouse (job-boards.greenhouse.io), Naukri.com, and Shine.com. Open a job posting and try again."
         };
     }
 
@@ -423,6 +447,130 @@ async function extractJobDetails() {
             status: "Applied",
             portal: "greenhouse.io",
             url: window.location.href
+        };
+    }
+
+    // ── Shine.com: URL + meta title + labeled body fields ──
+    if (isShine) {
+        const path = window.location.pathname;
+        const jobPathMatch = path.match(/^\/jobs\/([^/]+)\/([^/]+)\/(\d+)/i);
+
+        if (!jobPathMatch) {
+            return {
+                error: "This is not a Shine job page. Open a job listing at shine.com/jobs/... and try again."
+            };
+        }
+
+        const companySlug = jobPathMatch[2];
+
+        function humanizeShineSlug(slug) {
+            if (!slug) return "N/A";
+            return decodeURIComponent(slug)
+                .replace(/[-_]+/g, " ")
+                .replace(/\b\w/g, (c) => c.toUpperCase())
+                .trim();
+        }
+
+        const pageTitleMeta =
+            document.querySelector('meta[property="og:title"]')?.content ||
+            document.title ||
+            "";
+        const shineMetaMatch = pageTitleMeta.match(
+            /^(.+?)\s+Job in\s+(.+?)\s+at\s+(.+?)\s*-\s*Shine(?:\.com)?$/i
+        );
+        if (shineMetaMatch) {
+            if (title === "N/A") title = shineMetaMatch[1].trim();
+            if (company === "N/A") company = shineMetaMatch[2].trim();
+            if (location === "N/A") location = shineMetaMatch[3].trim();
+        }
+
+        if (title === "N/A") {
+            const h1 = document.querySelector("h1")?.innerText?.trim();
+            if (h1 && h1.length >= 3 && h1.length <= 150) title = h1;
+        }
+
+        if (company === "N/A" && companySlug) {
+            company = humanizeShineSlug(companySlug);
+        }
+
+        const bodyHead = getBodyText().slice(0, 5000);
+
+        const locMatch = bodyHead.match(
+            /Location\s*((?:All India,\s*)?[A-Za-z][^\n]+?)(?=Experience|Salary|Employment|Work Mode|Apply(?:\s+Now)?)/i
+        );
+        if (locMatch) {
+            location = locMatch[1].trim().replace(/\s+/g, " ");
+        }
+
+        if (experience === "Not Mentioned") {
+            const expMatch = bodyHead.match(
+                /Experience\s*(\d+\s+to\s+\d+\s+Yrs|\d+\s*[-–]\s*\d+\s+Yrs|\d+\s*\+\s*Yrs)/i
+            );
+            if (expMatch) experience = expMatch[1].trim();
+        }
+
+        if (salary === "Not Mentioned") {
+            const salMatch = bodyHead.match(
+                /Salary\s*(Rs\s*[\d.,\s-]+(?:Lakh\/Yr|Lacs?\s*(?:PA)?|LPA)?|\d[\d.,\s-]*LPA)/i
+            );
+            if (salMatch) salary = salMatch[1].trim();
+        }
+
+        if (company === "N/A") {
+            const postedByMatch = bodyHead.match(/Posted By\s*\n?\s*([^\n]+)/i);
+            if (postedByMatch) {
+                const c = postedByMatch[1].trim();
+                if (c && c.length < 80 && !/shine/i.test(c)) company = c;
+            }
+        }
+
+        if (experience === "Not Mentioned") {
+            const expPatterns = [
+                /(\d+\s+to\s+\d+)\s+Yrs/i,
+                /(\d+\s*[-–]\s*\d+)\s+Yrs/i,
+                /(\d+)\s*\+\s*Yrs/i,
+            ];
+            for (const pattern of expPatterns) {
+                const m = bodyHead.match(pattern);
+                if (m) {
+                    experience = m[0].trim();
+                    break;
+                }
+            }
+        }
+
+        if (salary === "Not Mentioned") {
+            const salaryPatterns = [
+                /(\d+[\d.,\s-]*\s*LPA)/i,
+                /(Rs\s*[\d.,\s-]+\s*(?:Lakh\/Yr|Lacs?\s*PA))/i,
+            ];
+            for (const pattern of salaryPatterns) {
+                const m = bodyHead.match(pattern);
+                if (m) {
+                    salary = m[1].trim();
+                    break;
+                }
+            }
+        }
+
+        if (location === "N/A") {
+            const CITIES = /\b(Bengaluru|Bangalore|Mumbai|Hyderabad|Chennai|Pune|Delhi|New Delhi|Noida|Gurgaon|Gurugram|Kolkata|Ahmedabad|Jaipur|Lucknow|Kochi|Chandigarh|Indore|Coimbatore|All India)\b/i;
+            const m = bodyHead.match(CITIES);
+            if (m) location = m[0];
+        }
+
+        const cleanUrl = window.location.origin + path;
+
+        return {
+            date: new Date().toISOString().split("T")[0],
+            company,
+            salary,
+            location,
+            title,
+            experience,
+            status: "Applied",
+            portal: "shine.com",
+            url: cleanUrl
         };
     }
 

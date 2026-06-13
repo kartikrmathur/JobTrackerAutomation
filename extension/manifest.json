@@ -1,10 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Job Tracker",
-  "version": "1.4",
-  "description": "Save jobs from LinkedIn, Greenhouse boards, and Naukri.com; export one CSV from local storage",
+  "version": "1.6",
+  "description": "Save jobs from LinkedIn, Greenhouse boards, Naukri.com, and Shine.com; export one CSV from local storage",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": ["<all_urls>"],
+  "web_accessible_resources": [
+    {
+      "resources": ["vendor/pdf.worker.min.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "action": {
     "default_popup": "popup.html"
   },

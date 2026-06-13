@@ -189,6 +189,29 @@
       color: var(--danger);
       border-color: var(--danger);
     }
+
+    .import-bar {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      background: #111820;
+      margin-bottom: 14px;
+    }
+
+    .import-bar label[for="resumeFileInput"] {
+      cursor: pointer;
+    }
+
+    #resumeFileInput {
+      padding: 6px 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    #resumeOverwrite {
+      width: auto;
+      accent-color: var(--accent);
+    }
   </style>
 </head>
 <body>
@@ -201,10 +224,40 @@
         <button class="btn primary" id="newProfileBtn" type="button">New Profile</button>
       </div>
       <div id="optionsStatus" class="status"></div>
+
+      <!-- ── Google Sheets Integration ── -->
+      <div style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 16px;">
+        <h2 style="font-size:13px; color: var(--accent); margin-bottom: 6px;">📊 Google Sheets Sync</h2>
+        <p class="hint" style="margin-bottom: 8px;">
+          Paste your Apps Script Web App URL here. Every job you Save will be instantly added to your Google Sheet.
+        </p>
+        <label for="webAppUrlInput" style="font-size:11px; color: var(--muted); font-family: monospace;">Web App URL</label>
+        <input id="webAppUrlInput" type="url"
+          placeholder="https://script.google.com/macros/s/..."
+          style="width:100%; margin-bottom: 8px; font-size:12px;">
+        <div class="btn-row">
+          <button class="btn primary" id="saveWebAppUrlBtn" type="button" style="font-size:12px; padding: 7px 10px;">Save URL</button>
+          <button class="btn" id="testWebAppUrlBtn" type="button" style="font-size:12px; padding: 7px 10px;">Test</button>
+        </div>
+        <div id="sheetsStatus" class="status" style="font-size:12px; margin-top:6px;"></div>
+      </div>
     </aside>
 
     <main class="content">
       <h2>Profile Data</h2>
+      <div class="import-bar">
+        <label for="resumeFileInput">Import from resume (.pdf / .docx)</label>
+        <p class="hint" style="margin-top: 4px;">Pick your file, then fill the form automatically. Parsing is heuristic—always review before saving.</p>
+        <div class="btn-row" style="flex-wrap: wrap; align-items: center; margin-top: 10px;">
+          <input id="resumeFileInput" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+          <label style="display: flex; align-items: center; gap: 6px; margin: 0;">
+            <input id="resumeOverwrite" type="checkbox">
+            Replace existing fields
+          </label>
+          <button class="btn primary" id="resumeImportBtn" type="button">Fill form from resume</button>
+        </div>
+      </div>
+
       <form id="profileForm">
         <div class="full">
           <label for="profileName">Profile Name</label>
@@ -252,6 +305,9 @@
     </main>
   </div>
 
+  <script src="../vendor/jszip.min.js"></script>
+  <script src="../vendor/pdf.min.js"></script>
+  <script src="resumeParser.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

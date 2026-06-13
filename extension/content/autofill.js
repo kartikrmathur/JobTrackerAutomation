@@ -61,15 +61,27 @@
 
   function extractFieldSignals(el) {
     const parent = el.parentElement;
+    const ariaLabelledBy = String(el.getAttribute("aria-labelledby") || "")
+      .split(/\s+/)
+      .map((id) => document.getElementById(id)?.textContent || "")
+      .join(" ");
+    const questionContainer =
+      el.closest('[role="listitem"]') ||
+      el.closest('[data-automation-id]') ||
+      el.closest("form") ||
+      parent;
+    const questionText = questionContainer?.textContent?.slice(0, 220) || "";
     return [
       el.name,
       el.id,
       el.placeholder,
       el.getAttribute("aria-label"),
+      ariaLabelledBy,
       el.getAttribute("autocomplete"),
       el.getAttribute("data-testid"),
       el.getAttribute("data-automation-id"),
       getLabelText(el),
+      questionText,
       parent?.getAttribute("data-qa"),
       parent?.getAttribute("data-testid"),
       parent?.className
@@ -131,6 +143,8 @@
     const normalizedValue = String(value);
     const tag = el.tagName.toLowerCase();
     const type = normalize(el.type);
+    const role = normalize(el.getAttribute("role"));
+    const isContentEditable = el.isContentEditable || normalize(el.getAttribute("contenteditable")) === "true";
 
     if (tag === "select") {
       const options = Array.from(el.options || []);
@@ -142,6 +156,10 @@
     } else if (tag === "textarea" || tag === "input") {
       if (type === "checkbox" || type === "radio") return false;
       setNativeValue(el, normalizedValue);
+    } else if (role === "textbox" || isContentEditable) {
+      setNativeValue(el, normalizedValue);
+      el.textContent = normalizedValue;
+      if ("innerText" in el) el.innerText = normalizedValue;
     } else {
       return false;
     }
@@ -153,7 +171,11 @@
   }
 
   function collectFillableElements(root = document) {
-    return Array.from(root.querySelectorAll("input, textarea, select"));
+    return Array.from(
+      root.querySelectorAll(
+        'input, textarea, select, [role="textbox"], [contenteditable="true"]'
+      )
+    );
   }
 
   /** Field types that rarely appear together unless it is a job or HR-style form */
@@ -190,15 +212,17 @@
 
   function pageHintsJobApplication() {
     const href = normalize(location.href);
+    const host = normalize(location.host);
+    if (host.includes("forms.office.com")) return true;
     if (
-      /(\/apply|\/application|\/careers|\/jobs\/|\/job\/|\/vacancy|\/position|greenhouse\.io|lever\.co|myworkday|workday|taleo|icims|smartrecruiters|ashbyhq|jobvite|bamboohr|recruitee|naukri\.com\/|indeed\.com\/apply|linkedin\.com\/jobs)/i.test(
+      /(\/apply|\/application|\/careers|\/jobs\/|\/job\/|\/vacancy|\/position|greenhouse\.io|lever\.co|myworkday|workday|taleo|icims|smartrecruiters|ashbyhq|jobvite|bamboohr|recruitee|naukri\.com\/|shine\.com\/|indeed\.com\/apply|linkedin\.com\/jobs)/i.test(
         href
       )
     ) {
       return true;
     }
     const title = normalize(document.title);
-    if (/(apply|application|careers|job application|upload (your )?cv|upload (your )?resume|cover letter|work history|employment)/i.test(title)) {
+    if (/(apply|application|careers|job application|upload (your )?cv|upload (your )?resume|cover letter|work history|employment|microsoft forms|form)/i.test(title)) {
       return true;
     }
     const body = document.body?.innerText || "";
@@ -249,12 +273,16 @@
     const weakTypes = [...detectedTypes].filter((t) => WEAK_JOB_FIELD_TYPES.has(t));
     const resumeFile = hasResumeFileInput(elements);
     const hints = pageHintsJobApplication();
+    const isMicrosoftForms = normalize(location.host).includes("forms.office.com");
+
+    if (isMicrosoftForms) return true;
 
     if (resumeFile) return true;
     if (strongTypes.length >= 2) return true;
     if (strongTypes.length >= 1 && weakTypes.length >= 2) return true;
     if (detectedTypes.size >= 4 && strongTypes.length >= 1) return true;
     if (detectedTypes.size >= 3 && hints) return true;
+    if (weakTypes.length >= 1 && hints) return true;
     if (strongTypes.length >= 1 && hints) return true;
 
     if (isLikelyLoginOnlyForm(elements, detectedTypes)) return false;

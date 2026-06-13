@@ -19,6 +19,9 @@ const deleteProfileBtnEl = document.getElementById("deleteProfileBtn");
 const newProfileBtnEl = document.getElementById("newProfileBtn");
 const addExperienceBtnEl = document.getElementById("addExperienceBtn");
 const experiencesListEl = document.getElementById("experiencesList");
+const resumeFileInputEl = document.getElementById("resumeFileInput");
+const resumeOverwriteEl = document.getElementById("resumeOverwrite");
+const resumeImportBtnEl = document.getElementById("resumeImportBtn");
 
 function setStatus(message) {
   statusEl.textContent = message;
@@ -109,6 +112,33 @@ function readFormData() {
   }
   data.experiences = readExperiencesFromUI();
   return data;
+}
+
+function applyParsedResume(parsed, overwrite) {
+  for (const key of PROFILE_FIELDS) {
+    const v = parsed[key];
+    if (v == null || String(v).trim() === "") continue;
+    const input = document.getElementById(key);
+    if (!input) continue;
+    if (overwrite || !String(input.value).trim()) {
+      input.value = String(v).trim();
+    }
+  }
+
+  const exps = Array.isArray(parsed.experiences) ? parsed.experiences : [];
+  const currentUi = readExperiencesFromUI();
+  const uiHasExp = currentUi.some((entry) =>
+    Object.values(entry).some((val) => String(val || "").trim() !== "")
+  );
+
+  if (exps.length > 0 && (overwrite || !uiHasExp)) {
+    renderExperiences(exps);
+  }
+
+  const suggested = String(parsed.suggestedProfileName || "").trim();
+  if (suggested && (overwrite || !profileNameEl.value.trim())) {
+    profileNameEl.value = suggested;
+  }
 }
 
 function writeFormData(profile) {
@@ -262,4 +292,89 @@ profileFormEl.addEventListener("invalid", (event) => {
   void event;
 }, true);
 
+if (resumeImportBtnEl && resumeFileInputEl && resumeOverwriteEl) {
+  resumeImportBtnEl.addEventListener("click", async () => {
+    const file = resumeFileInputEl.files?.[0];
+    if (!file) {
+      setStatus("Choose a .pdf or .docx resume file first.");
+      return;
+    }
+    const RP = typeof window !== "undefined" ? window.ResumeParser : null;
+    if (!RP || typeof RP.extractTextFromFile !== "function") {
+      setStatus("Resume import libraries did not load. Reload this page.");
+      return;
+    }
+    try {
+      setStatus("Reading resume…");
+      const text = await RP.extractTextFromFile(file);
+      if (!text || text.replace(/\s/g, "").length < 40) {
+        setStatus("Could not read enough text from this file.");
+        return;
+      }
+      const parsed = RP.parseResumeText(text, file.name || "");
+      applyParsedResume(parsed, resumeOverwriteEl.checked);
+      let n = PROFILE_FIELDS.reduce((acc, key) => acc + (String(parsed[key] || "").trim() ? 1 : 0), 0);
+      const expRows = Array.isArray(parsed.experiences) ? parsed.experiences.length : 0;
+      setStatus(
+        `Imported from ${file.name}. Populated ${n} profile field(s)` +
+          (expRows ? ` and ${expRows} experience block(s).` : ".") +
+          " Review Work Experience / dates, then Save Profile."
+      );
+    } catch (err) {
+      setStatus(String(err?.message || err || "Import failed."));
+    }
+  });
+}
+
 loadProfiles();
+
+// ── Google Sheets Web App URL ─────────────────────────────────────────────────
+const webAppUrlInputEl   = document.getElementById('webAppUrlInput');
+const saveWebAppUrlBtnEl = document.getElementById('saveWebAppUrlBtn');
+const testWebAppUrlBtnEl = document.getElementById('testWebAppUrlBtn');
+const sheetsStatusEl     = document.getElementById('sheetsStatus');
+
+function setSheetsStatus(msg, color) {
+  sheetsStatusEl.textContent = msg;
+  sheetsStatusEl.style.color = color || 'var(--muted)';
+}
+
+// Load saved URL on open
+chrome.storage.local.get({ webAppUrl: '' }, ({ webAppUrl }) => {
+  if (webAppUrl) webAppUrlInputEl.value = webAppUrl;
+});
+
+saveWebAppUrlBtnEl.addEventListener('click', () => {
+  const url = webAppUrlInputEl.value.trim();
+  if (!url) {
+    setSheetsStatus('Enter a URL first.', 'var(--danger)');
+    return;
+  }
+  if (!url.startsWith('https://script.google.com/macros/s/')) {
+    setSheetsStatus('URL should start with https://script.google.com/macros/s/', 'var(--danger)');
+    return;
+  }
+  chrome.storage.local.set({ webAppUrl: url }, () => {
+    setSheetsStatus('✓ URL saved. Jobs will now sync to Google Sheets.', 'var(--accent)');
+  });
+});
+
+testWebAppUrlBtnEl.addEventListener('click', async () => {
+  const url = webAppUrlInputEl.value.trim();
+  if (!url) {
+    setSheetsStatus('Enter and save a URL first.', 'var(--danger)');
+    return;
+  }
+  setSheetsStatus('Testing connection…', 'var(--muted)');
+  try {
+    const res = await fetch(url, { method: 'GET' });
+    const json = await res.json().catch(() => ({}));
+    if (json.ok || json.status) {
+      setSheetsStatus('✓ Connected! Web App is reachable.', 'var(--accent)');
+    } else {
+      setSheetsStatus('⚠ Reachable but unexpected response.', '#facc15');
+    }
+  } catch (err) {
+    setSheetsStatus('✗ Connection failed. Check the URL or re-deploy.', 'var(--danger)');
+  }
+});
